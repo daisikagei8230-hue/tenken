@@ -13,82 +13,50 @@ def get_conn():
 
 
 def inject_pwa_meta():
-    """スマホのホーム画面に追加した際にアプリらしく振る舞うよう、
-    manifestとアイコンをページのheadに埋め込む(Streamlit標準機能では
-    headを直接編集できないため、iframe経由でJavaScriptから追加している)。
-    Streamlit Community Cloudは実際のアプリをさらに内側のiframeで表示しているため、
-    window.parentではなくwindow.top(一番外側の本当のページ)を対象にする。"""
+    """スマホのホーム画面に追加した際にアプリらしく振る舞うよう、アイコン関連のタグを
+    ページのheadに埋め込む(Streamlit標準機能ではheadを直接編集できないため、iframe経由の
+    JavaScriptから追加している)。Streamlit Community Cloudは実際のアプリをさらに内側の
+    iframeで表示しているため、window.parentではなくwindow.top(一番外側の本当のページ)を対象にする。
+
+    注意: manifest.jsonへのリンクはあえて追加していない。manifestを追加すると
+    ChromeがPWAとして扱い「ホーム画面に追加」時にmanifestのstart_url(常に"/")を
+    優先してしまい、ログイン記憶(URLの合言葉)が失われてしまうため
+    (かつサンドボックス化されたiframeからトップページのURLを書き換えて移動する操作は
+    ブラウザにブロックされるため、JS側で復元することもできない)。
+    アイコン・タイトルはiOSのapple-touch-icon等の仕組みのみに頼っており、
+    これは現在開いているURLをそのままホーム画面に登録するため、ログイン記憶と両立できる。"""
     st.iframe(
         """
         <script>
         (function() {
             const doc = window.top.document;
-            if (!doc.querySelector('link[rel="manifest"]')) {
-                const head = doc.head;
+            if (doc.querySelector('link[rel="apple-touch-icon"]')) { return; }
+            const head = doc.head;
 
-                const manifestLink = doc.createElement('link');
-                manifestLink.rel = 'manifest';
-                manifestLink.href = '/app/static/manifest.json';
-                head.appendChild(manifestLink);
+            const themeColor = doc.createElement('meta');
+            themeColor.name = 'theme-color';
+            themeColor.content = '#1e3a5f';
+            head.appendChild(themeColor);
 
-                const themeColor = doc.createElement('meta');
-                themeColor.name = 'theme-color';
-                themeColor.content = '#1e3a5f';
-                head.appendChild(themeColor);
+            const appleCapable = doc.createElement('meta');
+            appleCapable.name = 'apple-mobile-web-app-capable';
+            appleCapable.content = 'yes';
+            head.appendChild(appleCapable);
 
-                const appleCapable = doc.createElement('meta');
-                appleCapable.name = 'apple-mobile-web-app-capable';
-                appleCapable.content = 'yes';
-                head.appendChild(appleCapable);
+            const appleStatusBar = doc.createElement('meta');
+            appleStatusBar.name = 'apple-mobile-web-app-status-bar-style';
+            appleStatusBar.content = 'black-translucent';
+            head.appendChild(appleStatusBar);
 
-                const appleStatusBar = doc.createElement('meta');
-                appleStatusBar.name = 'apple-mobile-web-app-status-bar-style';
-                appleStatusBar.content = 'black-translucent';
-                head.appendChild(appleStatusBar);
+            const appleTitle = doc.createElement('meta');
+            appleTitle.name = 'apple-mobile-web-app-title';
+            appleTitle.content = '整備点検';
+            head.appendChild(appleTitle);
 
-                const appleTitle = doc.createElement('meta');
-                appleTitle.name = 'apple-mobile-web-app-title';
-                appleTitle.content = '整備点検';
-                head.appendChild(appleTitle);
-
-                const appleIcon = doc.createElement('link');
-                appleIcon.rel = 'apple-touch-icon';
-                appleIcon.href = '/app/static/icon-192.png';
-                head.appendChild(appleIcon);
-            }
-
-            // ログイン記憶(manifest追加とは無関係に毎回実行する): URLに合言葉があればブラウザに保存し、
-            // 無ければ保存済みの合言葉をURLへ復元して再読み込みする。
-            // (ホーム画面アイコンはmanifestのstart_url固定の"/"で開くため、
-            // このタイミングで合言葉を付け直す必要がある)
-            // ログイン直後はURLへの反映に時間差があるため、少し待ちながら繰り返し確認する。
-            let saveAttempts = 0;
-            const trySaveKey = function() {
-                try {
-                    const url = new URL(window.top.location.href);
-                    const currentKey = url.searchParams.get('key');
-                    if (currentKey) {
-                        window.top.localStorage.setItem('tenken_key', currentKey);
-                        return;
-                    }
-                } catch (e) {}
-                saveAttempts++;
-                if (saveAttempts < 15) {
-                    setTimeout(trySaveKey, 300);
-                }
-            };
-            trySaveKey();
-
-            try {
-                const url = new URL(window.top.location.href);
-                if (!url.searchParams.get('key')) {
-                    const saved = window.top.localStorage.getItem('tenken_key');
-                    if (saved) {
-                        url.searchParams.set('key', saved);
-                        window.top.location.replace(url.toString());
-                    }
-                }
-            } catch (e) {}
+            const appleIcon = doc.createElement('link');
+            appleIcon.rel = 'apple-touch-icon';
+            appleIcon.href = '/app/static/icon-192.png';
+            head.appendChild(appleIcon);
         })();
         </script>
         """,
@@ -98,9 +66,8 @@ def inject_pwa_meta():
 
 def require_login():
     """共通パスワードでのログインゲート。認証済みでなければ入力画面を表示して停止する。
-    一度ログインするとURLに合言葉が付与され、それがブラウザのlocalStorageにも保存される。
-    次回以降(ホーム画面アイコン経由も含め)はURLまたはlocalStorageの合言葉を検知して
-    自動的にログイン済みとして扱う。"""
+    一度ログインするとURLに合言葉が付与される。次回以降、ログイン後の状態のURLを
+    ホーム画面に追加しておけば、その合言葉を検知して自動的にログイン済みとして扱う。"""
     if st.session_state.get("authenticated"):
         return
 
