@@ -1,4 +1,5 @@
 import hmac
+import json
 from datetime import date, timedelta
 
 import pandas as pd
@@ -15,12 +16,14 @@ def get_conn():
 def inject_pwa_meta():
     """スマホのホーム画面に追加した際にアプリらしく振る舞うよう、
     manifestとアイコンをページのheadに埋め込む(Streamlit標準機能では
-    headを直接編集できないため、iframe経由でJavaScriptから追加している)。"""
+    headを直接編集できないため、iframe経由でJavaScriptから追加している)。
+    Streamlit Community Cloudは実際のアプリをさらに内側のiframeで表示しているため、
+    window.parentではなくwindow.top(一番外側の本当のページ)を対象にする。"""
     st.iframe(
         """
         <script>
         (function() {
-            const doc = window.parent.document;
+            const doc = window.top.document;
             if (doc.querySelector('link[rel="manifest"]')) { return; }
             const head = doc.head;
 
@@ -62,12 +65,12 @@ def inject_pwa_meta():
 
 def require_login():
     """共通パスワードでのログインゲート。認証済みでなければ入力画面を表示して停止する。
-    一度ログインするとURLに合言葉が付与され、次回以降(ホーム画面アイコン経由も含め)は
-    その合言葉を検知して自動的にログイン済みとして扱う。"""
+    一度ログインするとブラウザにCookieが保存され、次回以降(ホーム画面アイコン経由も含め)は
+    そのCookieを検知して自動的にログイン済みとして扱う。"""
     if st.session_state.get("authenticated"):
         return
 
-    if st.query_params.get("key") == st.secrets["APP_PASSWORD"]:
+    if st.context.cookies.get("tenken_auth") == st.secrets["APP_PASSWORD"]:
         st.session_state["authenticated"] = True
         return
 
@@ -76,11 +79,26 @@ def require_login():
     if st.button("ログイン"):
         if hmac.compare_digest(password, st.secrets["APP_PASSWORD"]):
             st.session_state["authenticated"] = True
-            st.query_params["key"] = password
+            _remember_password(password)
             st.rerun()
         else:
             st.error("パスワードが違います")
     st.stop()
+
+
+def _remember_password(password):
+    """次回以降パスワード入力を省略できるよう、ブラウザに1年間有効なCookieを保存する。"""
+    st.iframe(
+        f"""
+        <script>
+        try {{
+            window.top.document.cookie =
+                "tenken_auth=" + encodeURIComponent({json.dumps(password)}) + "; path=/; max-age=31536000; SameSite=Lax";
+        }} catch (e) {{}}
+        </script>
+        """,
+        height=1,
+    )
 
 
 def init_db():
