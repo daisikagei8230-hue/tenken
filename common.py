@@ -1,5 +1,4 @@
 import hmac
-import json
 from datetime import date, timedelta
 
 import pandas as pd
@@ -70,7 +69,7 @@ def require_login():
     if st.session_state.get("authenticated"):
         return
 
-    if st.context.cookies.get("tenken_auth") == st.secrets["APP_PASSWORD"]:
+    if st.query_params.get("key") == st.secrets["APP_PASSWORD"]:
         st.session_state["authenticated"] = True
         return
 
@@ -79,26 +78,11 @@ def require_login():
     if st.button("ログイン"):
         if hmac.compare_digest(password, st.secrets["APP_PASSWORD"]):
             st.session_state["authenticated"] = True
-            _remember_password(password)
+            st.query_params["key"] = password
             st.rerun()
         else:
             st.error("パスワードが違います")
     st.stop()
-
-
-def _remember_password(password):
-    """次回以降パスワード入力を省略できるよう、ブラウザに1年間有効なCookieを保存する。"""
-    st.iframe(
-        f"""
-        <script>
-        try {{
-            window.top.document.cookie =
-                "tenken_auth=" + encodeURIComponent({json.dumps(password)}) + "; path=/; max-age=31536000; SameSite=Lax";
-        }} catch (e) {{}}
-        </script>
-        """,
-        height=1,
-    )
 
 
 def init_db():
