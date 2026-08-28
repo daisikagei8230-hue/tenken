@@ -55,6 +55,24 @@ def inject_pwa_meta():
             appleIcon.rel = 'apple-touch-icon';
             appleIcon.href = '/app/static/icon-192.png';
             head.appendChild(appleIcon);
+
+            // ログイン記憶: URLに合言葉があればブラウザに保存し、
+            // 無ければ保存済みの合言葉をURLへ復元して再読み込みする。
+            // (ホーム画面アイコンはmanifestのstart_url固定の"/"で開くため、
+            // このタイミングで合言葉を付け直す必要がある)
+            try {
+                const url = new URL(window.top.location.href);
+                const currentKey = url.searchParams.get('key');
+                if (currentKey) {
+                    window.top.localStorage.setItem('tenken_key', currentKey);
+                } else {
+                    const saved = window.top.localStorage.getItem('tenken_key');
+                    if (saved) {
+                        url.searchParams.set('key', saved);
+                        window.top.location.replace(url.toString());
+                    }
+                }
+            } catch (e) {}
         })();
         </script>
         """,
