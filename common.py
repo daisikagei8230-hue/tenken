@@ -61,12 +61,27 @@ def inject_pwa_meta():
             // 無ければ保存済みの合言葉をURLへ復元して再読み込みする。
             // (ホーム画面アイコンはmanifestのstart_url固定の"/"で開くため、
             // このタイミングで合言葉を付け直す必要がある)
+            // ログイン直後はURLへの反映に時間差があるため、少し待ちながら繰り返し確認する。
+            let saveAttempts = 0;
+            const trySaveKey = function() {
+                try {
+                    const url = new URL(window.top.location.href);
+                    const currentKey = url.searchParams.get('key');
+                    if (currentKey) {
+                        window.top.localStorage.setItem('tenken_key', currentKey);
+                        return;
+                    }
+                } catch (e) {}
+                saveAttempts++;
+                if (saveAttempts < 15) {
+                    setTimeout(trySaveKey, 300);
+                }
+            };
+            trySaveKey();
+
             try {
                 const url = new URL(window.top.location.href);
-                const currentKey = url.searchParams.get('key');
-                if (currentKey) {
-                    window.top.localStorage.setItem('tenken_key', currentKey);
-                } else {
+                if (!url.searchParams.get('key')) {
                     const saved = window.top.localStorage.getItem('tenken_key');
                     if (saved) {
                         url.searchParams.set('key', saved);
