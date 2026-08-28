@@ -61,8 +61,14 @@ def inject_pwa_meta():
 
 
 def require_login():
-    """共通パスワードでのログインゲート。認証済みでなければ入力画面を表示して停止する。"""
+    """共通パスワードでのログインゲート。認証済みでなければ入力画面を表示して停止する。
+    一度ログインするとURLに合言葉が付与され、次回以降(ホーム画面アイコン経由も含め)は
+    その合言葉を検知して自動的にログイン済みとして扱う。"""
     if st.session_state.get("authenticated"):
+        return
+
+    if st.query_params.get("key") == st.secrets["APP_PASSWORD"]:
+        st.session_state["authenticated"] = True
         return
 
     st.title("🔧 機械整備・点検記録")
@@ -70,6 +76,7 @@ def require_login():
     if st.button("ログイン"):
         if hmac.compare_digest(password, st.secrets["APP_PASSWORD"]):
             st.session_state["authenticated"] = True
+            st.query_params["key"] = password
             st.rerun()
         else:
             st.error("パスワードが違います")
