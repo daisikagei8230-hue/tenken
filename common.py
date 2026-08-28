@@ -12,6 +12,54 @@ def get_conn():
     return psycopg2.connect(st.secrets["DB_URL"], connect_timeout=8)
 
 
+def inject_pwa_meta():
+    """スマホのホーム画面に追加した際にアプリらしく振る舞うよう、
+    manifestとアイコンをページのheadに埋め込む(Streamlit標準機能では
+    headを直接編集できないため、iframe経由でJavaScriptから追加している)。"""
+    st.iframe(
+        """
+        <script>
+        (function() {
+            const doc = window.parent.document;
+            if (doc.querySelector('link[rel="manifest"]')) { return; }
+            const head = doc.head;
+
+            const manifestLink = doc.createElement('link');
+            manifestLink.rel = 'manifest';
+            manifestLink.href = '/app/static/manifest.json';
+            head.appendChild(manifestLink);
+
+            const themeColor = doc.createElement('meta');
+            themeColor.name = 'theme-color';
+            themeColor.content = '#1e3a5f';
+            head.appendChild(themeColor);
+
+            const appleCapable = doc.createElement('meta');
+            appleCapable.name = 'apple-mobile-web-app-capable';
+            appleCapable.content = 'yes';
+            head.appendChild(appleCapable);
+
+            const appleStatusBar = doc.createElement('meta');
+            appleStatusBar.name = 'apple-mobile-web-app-status-bar-style';
+            appleStatusBar.content = 'black-translucent';
+            head.appendChild(appleStatusBar);
+
+            const appleTitle = doc.createElement('meta');
+            appleTitle.name = 'apple-mobile-web-app-title';
+            appleTitle.content = '整備点検';
+            head.appendChild(appleTitle);
+
+            const appleIcon = doc.createElement('link');
+            appleIcon.rel = 'apple-touch-icon';
+            appleIcon.href = '/app/static/icon-192.png';
+            head.appendChild(appleIcon);
+        })();
+        </script>
+        """,
+        height=1,
+    )
+
+
 def require_login():
     """共通パスワードでのログインゲート。認証済みでなければ入力画面を表示して停止する。"""
     if st.session_state.get("authenticated"):

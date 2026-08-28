@@ -1,8 +1,9 @@
 import streamlit as st
 
-from common import STATUS_LABELS, compute_status, init_db, load_machines, load_records, require_login
+from common import STATUS_LABELS, compute_status, init_db, inject_pwa_meta, load_machines, load_records, require_login
 
 st.set_page_config(page_title="機械整備・点検記録", page_icon="🔧", layout="wide")
+inject_pwa_meta()
 
 require_login()
 init_db()

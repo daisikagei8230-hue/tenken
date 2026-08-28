@@ -2,9 +2,10 @@ from datetime import date
 
 import streamlit as st
 
-from common import add_machine, delete_machine, init_db, load_machines, require_login, update_machine
+from common import add_machine, delete_machine, init_db, inject_pwa_meta, load_machines, require_login, update_machine
 
 st.set_page_config(page_title="機械設備の登録", page_icon="🔧", layout="wide")
+inject_pwa_meta()
 require_login()
 init_db()
 

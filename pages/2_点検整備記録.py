@@ -2,9 +2,10 @@ from datetime import date
 
 import streamlit as st
 
-from common import add_record, delete_record, init_db, load_machines, load_records, require_login
+from common import add_record, delete_record, init_db, inject_pwa_meta, load_machines, load_records, require_login
 
 st.set_page_config(page_title="点検・整備記録", page_icon="📝", layout="wide")
+inject_pwa_meta()
 require_login()
 init_db()
 
