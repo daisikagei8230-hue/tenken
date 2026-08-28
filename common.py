@@ -13,18 +13,16 @@ def get_conn():
 
 
 def inject_pwa_meta():
-    """スマホのホーム画面に追加した際にアプリらしく振る舞うよう、アイコン関連のタグを
+    """スマホのホーム画面にアイコン付きで追加できるよう、apple-touch-iconのみを
     ページのheadに埋め込む(Streamlit標準機能ではheadを直接編集できないため、iframe経由の
     JavaScriptから追加している)。Streamlit Community Cloudは実際のアプリをさらに内側の
     iframeで表示しているため、window.parentではなくwindow.top(一番外側の本当のページ)を対象にする。
 
-    注意: manifest.jsonへのリンクはあえて追加していない。manifestを追加すると
-    ChromeがPWAとして扱い「ホーム画面に追加」時にmanifestのstart_url(常に"/")を
-    優先してしまい、ログイン記憶(URLの合言葉)が失われてしまうため
-    (かつサンドボックス化されたiframeからトップページのURLを書き換えて移動する操作は
-    ブラウザにブロックされるため、JS側で復元することもできない)。
-    アイコン・タイトルはiOSのapple-touch-icon等の仕組みのみに頼っており、
-    これは現在開いているURLをそのままホーム画面に登録するため、ログイン記憶と両立できる。"""
+    注意: manifest.jsonへのリンクや apple-mobile-web-app-capable 等の「スタンドアロン表示」を
+    指示するタグはあえて追加していない。これらを付けると「ホーム画面に追加」時にログイン後の
+    URL(合言葉付き)が保持されず、常に合言葉なしのURLに戻ってしまう不具合が実機で確認された
+    (原因の詳細はこちらの環境では再現・特定できなかったが、これらのタグを外すことで
+    通常のブックマークと同じ挙動に近づけ、ログイン記憶を優先する)。"""
     st.iframe(
         """
         <script>
@@ -32,26 +30,6 @@ def inject_pwa_meta():
             const doc = window.top.document;
             if (doc.querySelector('link[rel="apple-touch-icon"]')) { return; }
             const head = doc.head;
-
-            const themeColor = doc.createElement('meta');
-            themeColor.name = 'theme-color';
-            themeColor.content = '#1e3a5f';
-            head.appendChild(themeColor);
-
-            const appleCapable = doc.createElement('meta');
-            appleCapable.name = 'apple-mobile-web-app-capable';
-            appleCapable.content = 'yes';
-            head.appendChild(appleCapable);
-
-            const appleStatusBar = doc.createElement('meta');
-            appleStatusBar.name = 'apple-mobile-web-app-status-bar-style';
-            appleStatusBar.content = 'black-translucent';
-            head.appendChild(appleStatusBar);
-
-            const appleTitle = doc.createElement('meta');
-            appleTitle.name = 'apple-mobile-web-app-title';
-            appleTitle.content = '整備点検';
-            head.appendChild(appleTitle);
 
             const appleIcon = doc.createElement('link');
             appleIcon.rel = 'apple-touch-icon';

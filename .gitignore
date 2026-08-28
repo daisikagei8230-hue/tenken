@@ -4,3 +4,4 @@ data/
 .streamlit/secrets.toml
 .DS_Store
 qrcode_app.png
+qrcode_app_autologin.png
