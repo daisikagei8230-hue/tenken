@@ -23,40 +23,41 @@ def inject_pwa_meta():
         <script>
         (function() {
             const doc = window.top.document;
-            if (doc.querySelector('link[rel="manifest"]')) { return; }
-            const head = doc.head;
+            if (!doc.querySelector('link[rel="manifest"]')) {
+                const head = doc.head;
 
-            const manifestLink = doc.createElement('link');
-            manifestLink.rel = 'manifest';
-            manifestLink.href = '/app/static/manifest.json';
-            head.appendChild(manifestLink);
+                const manifestLink = doc.createElement('link');
+                manifestLink.rel = 'manifest';
+                manifestLink.href = '/app/static/manifest.json';
+                head.appendChild(manifestLink);
 
-            const themeColor = doc.createElement('meta');
-            themeColor.name = 'theme-color';
-            themeColor.content = '#1e3a5f';
-            head.appendChild(themeColor);
+                const themeColor = doc.createElement('meta');
+                themeColor.name = 'theme-color';
+                themeColor.content = '#1e3a5f';
+                head.appendChild(themeColor);
 
-            const appleCapable = doc.createElement('meta');
-            appleCapable.name = 'apple-mobile-web-app-capable';
-            appleCapable.content = 'yes';
-            head.appendChild(appleCapable);
+                const appleCapable = doc.createElement('meta');
+                appleCapable.name = 'apple-mobile-web-app-capable';
+                appleCapable.content = 'yes';
+                head.appendChild(appleCapable);
 
-            const appleStatusBar = doc.createElement('meta');
-            appleStatusBar.name = 'apple-mobile-web-app-status-bar-style';
-            appleStatusBar.content = 'black-translucent';
-            head.appendChild(appleStatusBar);
+                const appleStatusBar = doc.createElement('meta');
+                appleStatusBar.name = 'apple-mobile-web-app-status-bar-style';
+                appleStatusBar.content = 'black-translucent';
+                head.appendChild(appleStatusBar);
 
-            const appleTitle = doc.createElement('meta');
-            appleTitle.name = 'apple-mobile-web-app-title';
-            appleTitle.content = '整備点検';
-            head.appendChild(appleTitle);
+                const appleTitle = doc.createElement('meta');
+                appleTitle.name = 'apple-mobile-web-app-title';
+                appleTitle.content = '整備点検';
+                head.appendChild(appleTitle);
 
-            const appleIcon = doc.createElement('link');
-            appleIcon.rel = 'apple-touch-icon';
-            appleIcon.href = '/app/static/icon-192.png';
-            head.appendChild(appleIcon);
+                const appleIcon = doc.createElement('link');
+                appleIcon.rel = 'apple-touch-icon';
+                appleIcon.href = '/app/static/icon-192.png';
+                head.appendChild(appleIcon);
+            }
 
-            // ログイン記憶: URLに合言葉があればブラウザに保存し、
+            // ログイン記憶(manifest追加とは無関係に毎回実行する): URLに合言葉があればブラウザに保存し、
             // 無ければ保存済みの合言葉をURLへ復元して再読み込みする。
             // (ホーム画面アイコンはmanifestのstart_url固定の"/"で開くため、
             // このタイミングで合言葉を付け直す必要がある)
@@ -82,8 +83,9 @@ def inject_pwa_meta():
 
 def require_login():
     """共通パスワードでのログインゲート。認証済みでなければ入力画面を表示して停止する。
-    一度ログインするとブラウザにCookieが保存され、次回以降(ホーム画面アイコン経由も含め)は
-    そのCookieを検知して自動的にログイン済みとして扱う。"""
+    一度ログインするとURLに合言葉が付与され、それがブラウザのlocalStorageにも保存される。
+    次回以降(ホーム画面アイコン経由も含め)はURLまたはlocalStorageの合言葉を検知して
+    自動的にログイン済みとして扱う。"""
     if st.session_state.get("authenticated"):
         return
 
